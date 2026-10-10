@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prefiero Quererte</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #06040a;
+            color: #f7eed3;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Georgia, serif;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #canvas-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .card-container {
+            position: relative;
+            z-index: 10;
+            width: 88%;
+            max-width: 380px;
+            max-height: 80vh;
+            background: rgba(16, 12, 22, 0.82);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 22px;
+            padding: 24px 20px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.85), 0 0 25px rgba(255, 215, 0, 0.12);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #ffd700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+            text-align: center;
+        }
+
+        .poem-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 6px;
+            scroll-behavior: smooth;
+        }
+
+        .poem-content::-webkit-scrollbar {
+            width: 3px;
+        }
+        .poem-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 215, 0, 0.35);
+            border-radius: 4px;
+        }
+
+        .stanza {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 18px;
+            color: #f7eed3;
+            white-space: pre-line;
+        }
+
+        .stanza:last-child {
+            margin-bottom: 0;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1rem;
+            background-color: #ffd700;
+            margin-left: 2px;
+            animation: blink 0.8s infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+        }
+
+        .next-btn {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.22), rgba(218, 165, 32, 0.42));
+            border: 1px solid #ffd700;
+            color: #fff8dc;
+            padding: 12px 28px;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            width: 100%;
+        }
+
+        .next-btn:active {
+            transform: scale(0.97);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.4), rgba(218, 165, 32, 0.6));
+        }
+
+        .next-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas-bg"></canvas>
+
+    <!-- ARCHIVO DE MÚSICA DE FONDO -->
+    <audio id="bgMusic" loop preload="auto">
+        <source src="let-the-world-burn.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="card-container">
+        <div class="header">
+            <h1 class="title">que puedo hacer...</h1>
+        </div>
+
+        <div class="poem-content" id="poemBox"></div>
+
+        <div class="controls">
+            <button class="next-btn" id="nextBtn">Continuar</button>
+        </div>
+    </div>
+
+    <script>
+        const poemStanzas = [
+            "que puedo hacer para demostrarte que me gustas sin llegar a molestarte,\npara mostrarte mis ganas de estar contigo sin llegar a aburrirte,\npara hacerte entender que solo quiero estar contigo a pesar de lo que me has dicho.",
+            "que puedo hacer para enseñarte que mis intenciones van más allá que tenerte solo para un instante,\npara expresar que quiero que seas mía y que no quiero compartirte con nadie,\npara decirte que te quiero más que a nada, sin sonar que estoy desesperado cada que me pierdo en tu mirada?",
+            "que puedo hacer para convencerte que no soy uno de esos imbéciles que se atrevieron a hacerte daño,\npara que confíes en que lo que quiero contigo es algo que quiero que dure para largo,\npara que veas que en verdad quiero estar contigo y que eres lo mejor que me ha pasado.",
+            "y es que dime que puedo hacer para decirte lo que siento, mientras intento ocultar que cuando me abrazas me dejas sin aliento,\nporque de verdad, que puedo hacer para que entiendas lo mucho que este corazón idiota te ama, sin que te sientas presionada,",
+            "porque que puedo hacer para mostrarte que gracias a ti, por primera vez, mi corazón convenció a mi cabeza,\npara que empezara a pensar, que a pesar de todo lo que ha pasado, en verdad puedo estar a tu lado."
+        ];
+
+        let currentStanzaIndex = 0;
+        let isTyping = false;
+
+        const poemBox = document.getElementById('poemBox');
+        const nextBtn = document.getElementById('nextBtn');
+        const bgMusic = document.getElementById('bgMusic');
+
+        // Reproducir música inmediatamente al cargar o al primer toque
+        function initAudio() {
+            bgMusic.play().catch(() => {
+                const startOnInteraction = () => {
+                    bgMusic.play();
+                    window.removeEventListener('click', startOnInteraction);
+                    window.removeEventListener('touchstart', startOnInteraction);
+                };
+                window.addEventListener('click', startOnInteraction);
+                window.addEventListener('touchstart', startOnInteraction);
+            });
+        }
+
+        function typeWriter(text, container, callback) {
+            isTyping = true;
+            nextBtn.disabled = true;
+
+            const stanzaDiv = document.createElement('div');
+            stanzaDiv.className = 'stanza';
+            container.appendChild(stanzaDiv);
+
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            stanzaDiv.appendChild(cursor);
+
+            let charIndex = 0;
+
+            function typeNextChar() {
+                if (charIndex < text.length) {
+                    const char = text.charAt(charIndex);
+                    cursor.before(char);
+                    charIndex++;
+                    poemBox.scrollTop = poemBox.scrollHeight;
+                    setTimeout(typeNextChar, 35);
+                } else {
+                    cursor.remove();
+                    isTyping = false;
+                    nextBtn.disabled = false;
+                    if (callback) callback();
+                }
+            }
+
+            typeNextChar();
+        }
+
+        nextBtn.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play().catch(() => {});
+            }
+
+            if (isTyping) return;
+
+            if (currentStanzaIndex < poemStanzas.length) {
+                typeWriter(poemStanzas[currentStanzaIndex], poemBox, () => {
+                    currentStanzaIndex++;
+                    if (currentStanzaIndex >= poemStanzas.length) {
+                        nextBtn.textContent = "Siempre contigo ❤️";
+                        nextBtn.disabled = true;
+                    }
+                });
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initAudio();
+            setTimeout(() => {
+                typeWriter(poemStanzas[0], poemBox, () => {
+                    currentStanzaIndex = 1;
+                });
+            }, 400);
+        });
+
+        /* --- GENERACIÓN DE GIRASOLES --- */
+        const canvas = document.getElementById('canvas-bg');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const activeSunflowers = [];
+        const MAX_SUNFLOWERS = 12; 
+        const MIN_DISTANCE = 85;   
+
+        class UltraDetailedSunflower {
+            constructor(x, y, radius) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.progress = 0;
+                this.life = 0;
+                
+                this.maxLife = 100 + Math.random() * 220; 
+                this.growthSpeed = 0.0030; 
+                this.fadeSpeed = 0.012 + Math.random() * 0.02;
+
+                this.opacity = 0;
+                this.state = 'growing';
+
+                this.seeds = [];
+                const seedCount = 380;
+                const goldenAngle = 137.508 * (Math.PI / 180);
+
+                for (let i = 0; i < seedCount; i++) {
+                    const r = (this.radius * 0.42) * Math.sqrt(i / seedCount);
+                    const theta = i * goldenAngle;
+                    
+                    let col;
+                    const p = i / seedCount;
+                    if (p < 0.15) col = 'rgba(20, 10, 2, ';
+                    else if (p < 0.55) col = 'rgba(85, 48, 8, ';
+                    else if (p < 0.82) col = 'rgba(165, 105, 15, ';
+                    else col = 'rgba(255, 195, 30, ';
+
+                    this.seeds.push({
+                        x: r * Math.cos(theta),
+                        y: r * Math.sin(theta),
+                        size: 0.7 + Math.random() * 1.1,
+                        color: col
+                    });
+                }
+
+                this.petals = [];
+                const layers = [
+                    { count: 18, lenMult: 1.0, widthMult: 0.28, color: 'rgba(255, 215, 0, ' },
+                    { count: 18, lenMult: 0.82, widthMult: 0.24, color: 'rgba(240, 180, 10, ' },
+                    { count: 14, lenMult: 0.65, widthMult: 0.2, color: 'rgba(218, 150, 0, ' }
+                ];
+
+                layers.forEach((layer, layerIdx) => {
+                    const offset = (layerIdx * Math.PI) / layer.count;
+                    for (let i = 0; i < layer.count; i++) {
+                        const angle = (i / layer.count) * Math.PI * 2 + offset;
+                        const len = this.radius * layer.lenMult * (0.9 + Math.random() * 0.2);
+                        const width = this.radius * layer.widthMult;
+
+                        this.petals.push({ angle, len, width, color: layer.color });
+                    }
+                });
+
+                this.particles = [];
+                for (let i = 0; i < 12; i++) {
+                    this.particles.push({
+                        x: (Math.random() - 0.5) * this.radius * 2,
+                        y: (Math.random() - 0.5) * this.radius * 2,
+                        vx: (Math.random() - 0.5) * 0.4,
+                        vy: -0.2 - Math.random() * 0.5,
+                        size: 0.8 + Math.random() * 1.2
+                    });
+                }
+            }
+
+            update() {
+                this.life++;
+
+                if (this.state === 'growing') {
+                    this.progress += this.growthSpeed;
+                    this.opacity = Math.min(1, this.opacity + 0.04);
+                    if (this.progress >= 1) {
+                        this.progress = 1;
+                        this.state = 'alive';
+                    }
+                } else if (this.state === 'alive') {
+                    if (this.life > this.maxLife) {
+                        this.state = 'fading';
+                    }
+                } else if (this.state === 'fading') {
+                    this.opacity -= this.fadeSpeed;
+                    if (this.opacity <= 0) {
+                        this.opacity = 0;
+                        this.state = 'dead';
+                    }
+                }
+
+                this.particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                });
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                const activePetalCount = Math.floor(this.progress * this.petals.length);
+                for (let i = 0; i < activePetalCount; i++) {
+                    const p = this.petals[i];
+                    ctx.save();
+                    ctx.rotate(p.angle);
+
+                    ctx.fillStyle = p.color + (this.opacity * 0.88) + ')';
+                    ctx.strokeStyle = 'rgba(160, 100, 0, ' + (this.opacity * 0.5) + ')';
+                    ctx.lineWidth = 0.8;
+
+                    ctx.beginPath();
+                    const startR = this.radius * 0.35;
+                    ctx.moveTo(startR, 0);
+                    ctx.bezierCurveTo(
+                        startR + p.len * 0.4, -p.width,
+                        startR + p.len * 0.8, -p.width * 0.5,
+                        startR + p.len, 0
+                    );
+                    ctx.bezierCurveTo(
+                        startR + p.len * 0.8, p.width * 0.5,
+                        startR + p.len * 0.4, p.width,
+                        startR, 0
+                    );
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.strokeStyle = 'rgba(255, 240, 150, ' + (this.opacity * 0.4) + ')';
+                    ctx.beginPath();
+                    ctx.moveTo(startR, 0);
+                    ctx.lineTo(startR + p.len * 0.85, 0);
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
+
+                const activeSeeds = Math.floor(this.progress * this.seeds.length);
+                for (let i = 0; i < activeSeeds; i++) {
+                    const s = this.seeds[i];
+                    ctx.fillStyle = s.color + this.opacity + ')';
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                if (this.opacity > 0.3) {
+                    ctx.fillStyle = 'rgba(255, 215, 0, ' + (this.opacity * 0.6) + ')';
+                    this.particles.forEach(pt => {
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                }
+
+                ctx.restore();
+            }
+        }
+
+        function createNonOverlappingSunflower() {
+            let attempts = 0;
+            const radius = 34 + Math.random() * 18;
+
+            while (attempts < 60) {
+                const x = radius + Math.random() * (canvas.width - radius * 2);
+                const y = radius + Math.random() * (canvas.height - radius * 2);
+
+                let isOverlapping = false;
+                for (const sf of activeSunflowers) {
+                    if (Math.hypot(sf.x - x, sf.y - y) < MIN_DISTANCE) {
+                        isOverlapping = true;
+                        break;
+                    }
+                }
+
+                if (!isOverlapping) {
+                    return new UltraDetailedSunflower(x, y, radius);
+                }
+                attempts++;
+            }
+            return null;
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            while (activeSunflowers.length < MAX_SUNFLOWERS) {
+                const newSf = createNonOverlappingSunflower();
+                if (newSf) activeSunflowers.push(newSf);
+                else break;
+            }
+
+            for (let i = activeSunflowers.length - 1; i >= 0; i--) {
+                const sf = activeSunflowers[i];
+                sf.update();
+                sf.draw(ctx);
+
+                if (sf.state === 'dead') {
+                    activeSunflowers.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
